@@ -10,7 +10,7 @@
       "name": "network",
       "desc": "AWS EC2上のBusCheckサーバーからバス運行情報を取得します",
       "whitelist": [
-        "http://YOUR_EC2_IP:3000"
+        "https://YOUR_DOMAIN"
       ]
     }
   ]

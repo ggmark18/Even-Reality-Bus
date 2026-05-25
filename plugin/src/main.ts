@@ -6,7 +6,10 @@ import {
   OsEventTypeList,
 } from '@evenrealities/even_hub_sdk';
 
-const API_BASE = 'http://localhost:3000';
+const API_BASE = 'https://YOUR_DOMAIN/bus';   // ← Apache のURLに変更
+const AUTH_USER = 'YOUR_USERNAME';             // ← Basic認証のユーザー名
+const AUTH_PASS = 'YOUR_PASSWORD';             // ← Basic認証のパスワード
+const AUTH_HEADER = 'Basic ' + btoa(`${AUTH_USER}:${AUTH_PASS}`);
 const AUTO_REFRESH_MS = 15_000;
 
 // ── 型定義 ──────────────────────────────────────────────────
@@ -194,7 +197,9 @@ async function fetchAndDisplay(force = false) {
   try {
     const url = `${API_BASE}/api/bus${force ? '?refresh=1' : ''}`;
     console.log('[buscheck] fetch:', url);
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: { 'Authorization': AUTH_HEADER },
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const newData = await res.json() as ApiResponse;
     console.log('[buscheck] fetch ok, buses:', newData.buses.length);
