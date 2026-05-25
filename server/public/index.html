@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>BusCheck</title>
   <link rel="icon" href="https://toyo-bus.bus-navigation.jp/wgsys/img/favicon.ico">
+  <script src="config.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -229,9 +230,9 @@
 
 <script>
   const AUTO_REFRESH_MS = 30_000;
-  const AUTH_USER = 'YOUR_USERNAME';   // ← Basic認証のユーザー名
-  const AUTH_PASS = 'YOUR_PASSWORD';   // ← Basic認証のパスワード
-  const AUTH_HEADER = 'Basic ' + btoa(`${AUTH_USER}:${AUTH_PASS}`);
+  // 認証ヘッダーはサーバーが生成した config.js から取得
+  const AUTH_HEADER = (typeof window.__BUSCHECK_AUTH__ === 'string')
+    ? window.__BUSCHECK_AUTH__ : '';
   let lastFetchedAt = null;
   let fetchTimer = null;
 

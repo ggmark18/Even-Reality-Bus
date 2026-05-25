@@ -1,5 +1,7 @@
 'use strict';
 
+require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const { scrapeBusInfo } = require('./scraper');
@@ -8,6 +10,19 @@ const app = express();
 
 // スマホ用ウェブUI（public/index.html）
 const publicDir = path.join(__dirname, 'public');
+
+// index.html が読み込む認証設定（環境変数から動的生成）
+app.get('/config.js', (req, res) => {
+  const user = process.env.AUTH_USER || '';
+  const pass = process.env.AUTH_PASS || '';
+  const header = user
+    ? 'Basic ' + Buffer.from(`${user}:${pass}`).toString('base64')
+    : '';
+  res.type('application/javascript');
+  res.set('Cache-Control', 'no-store');
+  res.send(`window.__BUSCHECK_AUTH__=${JSON.stringify(header)};`);
+});
+
 app.use(express.static(publicDir));
 app.get('/', (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
 

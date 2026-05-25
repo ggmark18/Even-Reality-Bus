@@ -18,18 +18,53 @@ evenhub --version
 
 ---
 
-## ローカル設定（本番との切り替え）
+## 環境変数による開発・本番の切り替え
 
-ローカル開発時は `plugin/src/main.ts` の上部を以下に変更します：
+ソースコードを変更せず、`.env` ファイルだけで開発・本番を切り替えます。
 
-```typescript
-// ローカル開発用
-const API_BASE  = 'http://localhost:3000';
-const AUTH_USER = '';   // ローカルは認証不要
-const AUTH_PASS = '';
+### ファイル構成
+
+| ファイル | コミット | 用途 |
+|---|---|---|
+| `plugin/.env` | ✅ | プラグイン開発デフォルト（localhost・認証なし） |
+| `plugin/.env.production.local` | ❌ | プラグイン本番値（実際のURL・認証情報） |
+| `server/.env.example` | ✅ | サーバー設定テンプレート |
+| `server/.env` | ❌ | サーバー実際の値（ローカル・EC2それぞれに配置） |
+
+### プラグイン（Vite）
+
+`plugin/.env`（開発用・コミット済み）:
+```env
+VITE_API_BASE=http://localhost:3000
+VITE_AUTH_USER=
+VITE_AUTH_PASS=
 ```
 
-> 本番デプロイ前に `https://YOUR_DOMAIN/bus` と認証情報に戻すことを忘れずに。
+`plugin/.env.production.local`（本番用・gitignore対象）:
+```env
+VITE_API_BASE=https://YOUR_DOMAIN/bus
+VITE_AUTH_USER=YOUR_USERNAME
+VITE_AUTH_PASS=YOUR_PASSWORD
+```
+
+`npm run dev` は `.env`（開発用）を、`npm run build` は `.env.production.local`（本番用）を自動的に読み込みます。
+
+### Web画面（index.html）
+
+`server/.env`（ローカル開発用）:
+```env
+AUTH_USER=
+AUTH_PASS=
+```
+
+サーバーが起動時に `.env` を読み込み、`/config.js` エンドポイントで認証情報を動的生成します。`index.html` はこの `config.js` を読み込むため、ソースコードの変更は不要です。
+
+EC2本番環境では `server/.env.example` をコピーして値を設定します：
+```bash
+cp .env.example .env
+nano .env   # 実際の値を入力
+pm2 restart buscheck-gateway
+```
 
 ---
 
@@ -37,7 +72,7 @@ const AUTH_PASS = '';
 
 ```bash
 cd server
-npm install
+npm install   # 初回のみ（dotenv 等を含む）
 node server.js
 ```
 
@@ -65,9 +100,9 @@ curl http://localhost:3000/api/debug | python3 -m json.tool
 **ターミナル1 — Vite 開発サーバー:**
 ```bash
 cd plugin
-npm install
+npm install   # 初回のみ
 npm run dev
-# → http://localhost:5173 で起動
+# → http://localhost:5173 で起動（.env を自動読み込み）
 ```
 
 **ターミナル2 — グラスシミュレーター:**
@@ -96,15 +131,18 @@ npx evenhub-simulator
 http://localhost:3000
 ```
 
-ローカルでは Basic認証は不要です（`index.html` の `AUTH_USER` / `AUTH_PASS` が空でも動作します）。
+`server/.env` の `AUTH_USER` が空の場合、認証ヘッダーなしで動作します。
 
 ---
 
 ## 4. プラグインのビルドと実機テスト
 
+`plugin/.env.production.local` に本番の値を設定した上でビルドします：
+
 ```bash
 cd plugin
 npm run build
+# → .env.production.local を読み込んで dist/ にビルド
 ```
 
 **QRサイドロード（実機確認）:**
@@ -126,6 +164,7 @@ npm run pack
 | エンドポイント | 説明 |
 |---|---|
 | `GET /` | Web画面（index.html） |
+| `GET /config.js` | 認証設定（環境変数から動的生成） |
 | `GET /api/bus` | 次のバス一覧（60秒キャッシュ） |
 | `GET /api/bus?refresh=1` | 強制再取得（キャッシュ無視） |
 | `GET /api/health` | サーバー状態確認 |
@@ -157,20 +196,23 @@ curl http://localhost:3000/api/debug | python3 -m json.tool
 ## 7. ファイル構成と役割
 
 ```
-server/
-├── gateway.js    # 常駐プロセス（本番用・ポート3000）
-│                 # リクエスト時に server.js を起動してプロキシ
-├── server.js     # Express サーバー（ポート3001 or 3000）
-│                 # /api/bus, /api/health, /api/debug を提供
-│                 # 1時間無通信で自動終了（本番のみ）
-├── scraper.js    # Puppeteer スクレイパー
-│                 # div.center_box から時刻・停留所通過情報を抽出
-└── public/
-    └── index.html  # スマートフォン用Web画面
-
-plugin/
-├── src/
-│   └── main.ts   # Even Hub プラグイン本体
-│                 # API_BASE / AUTH_USER / AUTH_PASS を上部で設定
-└── app.json      # パッケージ設定・ネットワーク許可リスト（whitelist）
+BusCheck/
+├── plugin/
+│   ├── .env                   # 開発デフォルト（コミット済み）
+│   ├── .env.production.local  # 本番値（gitignore対象・各自で作成）
+│   ├── src/
+│   │   └── main.ts            # Even Hub プラグイン本体
+│   │                          # import.meta.env で環境変数を参照
+│   └── app.json               # パッケージ設定・ネットワーク許可リスト
+└── server/
+    ├── .env                   # 実際の値（gitignore対象）
+    ├── .env.example           # 設定テンプレート（コミット済み）
+    ├── gateway.js             # 常駐プロセス（本番用・ポート3000）
+    ├── server.js              # Express サーバー（ポート3001 or 3000）
+    │                          # dotenv で .env を読み込み
+    │                          # /config.js で認証情報を動的提供
+    ├── scraper.js             # Puppeteer スクレイパー
+    └── public/
+        └── index.html         # スマートフォン用Web画面
+                               # <script src="config.js"> で認証情報を取得
 ```

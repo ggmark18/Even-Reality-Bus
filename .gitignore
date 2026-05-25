@@ -9,10 +9,10 @@ plugin/*.ehpk
 server/.local-chromium/
 server/.cache/
 
-# 環境設定・秘密情報
-.env
+# 環境設定・秘密情報（.env.example と plugin/.env のみコミット）
 .env.local
 .env.*.local
+server/.env
 
 # OS・エディタ
 .DS_Store
