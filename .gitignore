@@ -1,0 +1,28 @@
+# 依存パッケージ
+node_modules/
+
+# ビルド成果物
+plugin/dist/
+plugin/*.ehpk
+
+# Puppeteer がダウンロードする Chromium
+server/.local-chromium/
+server/.cache/
+
+# 環境設定・秘密情報
+.env
+.env.local
+.env.*.local
+
+# OS・エディタ
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ログ
+*.log
+npm-debug.log*
+
+# TypeScript キャッシュ
+*.tsbuildinfo

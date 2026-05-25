@@ -1,0 +1,17 @@
+{
+  "name": "BusCheck",
+  "packageName": "jp.cetacea.buscheck",
+  "version": "1.0.0",
+  "description": "東洋バス ゆりのき台第三→八千代中央駅 リアルタイム運行情報",
+  "icon": "public/icon.png",
+  "entry": "index.html",
+  "permissions": [
+    {
+      "name": "network",
+      "desc": "AWS EC2上のBusCheckサーバーからバス運行情報を取得します",
+      "whitelist": [
+        "http://YOUR_EC2_IP:3000"
+      ]
+    }
+  ]
+}

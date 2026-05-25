@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>BusCheck</title>
+  <link rel="icon" href="https://toyo-bus.bus-navigation.jp/wgsys/img/favicon.ico">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111;
+      color: #e8e8e8;
+      font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ヘッダー */
+    header {
+      background: #1a1a1a;
+      padding: 14px 20px 10px;
+      border-bottom: 1px solid #333;
+    }
+    header h1 {
+      font-size: 15px;
+      font-weight: 500;
+      color: #aaa;
+      letter-spacing: 0.03em;
+    }
+    header h1 span.arrow { color: #4a9eff; margin: 0 6px; }
+
+    /* アイコン位置スピナー */
+    .icon-spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2px solid #333;
+      border-top-color: #4a9eff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+
+    /* メインコンテンツ */
+    main {
+      flex: 1;
+      padding: 20px 20px 0;
+    }
+
+    /* バスカード */
+    .bus-card {
+      background: #1e1e1e;
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 14px;
+      border: 1px solid #2a2a2a;
+    }
+    .bus-card.first { border-color: #2a4a6a; }
+    .bus-card.cancelled { opacity: 0.55; }
+
+    .card-label {
+      font-size: 11px;
+      color: #666;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    /* 時刻行 */
+    .time-row {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+    .status-icon {
+      font-size: 18px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .time-block { display: flex; flex-direction: column; }
+    .time-label { font-size: 10px; color: #666; margin-bottom: 2px; }
+    .time-value {
+      font-size: 32px;
+      font-weight: 300;
+      letter-spacing: 0.02em;
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+    }
+    .time-value.predicted { color: #4a9eff; }
+    .time-value.scheduled-small { font-size: 18px; color: #888; }
+
+    .delay-badge {
+      background: #7a3a1a;
+      color: #ffaa66;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      align-self: center;
+    }
+    .cancelled-badge {
+      background: #4a1a1a;
+      color: #ff6666;
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 10px;
+    }
+
+    /* 残り時間 */
+    .minutes-row {
+      margin: 8px 0 4px 28px;
+    }
+    .minutes-value {
+      font-size: 22px;
+      font-weight: 500;
+      color: #4a9eff;
+    }
+    .minutes-unit { font-size: 14px; color: #666; margin-left: 2px; }
+    .arriving-soon {
+      font-size: 18px;
+      color: #ff9944;
+      font-weight: 500;
+    }
+
+    /* 停留所情報 */
+    .stops-row {
+      margin: 6px 0 0 28px;
+      font-size: 13px;
+      color: #888;
+    }
+    .stops-num {
+      color: #66cc88;
+      font-weight: 600;
+    }
+
+    /* 次のバス */
+    .bus-card.next .time-value {
+      font-size: 24px;
+      color: #ccc;
+    }
+
+    /* エラー・終了 */
+    .message-card {
+      background: #1e1e1e;
+      border-radius: 14px;
+      padding: 28px 20px;
+      text-align: center;
+      color: #666;
+      font-size: 16px;
+      border: 1px solid #2a2a2a;
+    }
+    .message-card.error { color: #ff6666; border-color: #4a1a1a; }
+
+    /* フッター */
+    footer {
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #222;
+      background: #151515;
+      margin-top: auto;
+    }
+    .footer-updated { font-size: 12px; color: #555; }
+    .footer-updated span.label { color: #444; margin-right: 4px; }
+    .footer-now {
+      font-size: 18px;
+      font-weight: 300;
+      color: #888;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* プログレスバー */
+    .progress-wrap {
+      height: 3px;
+      background: #222;
+    }
+    #progress-bar {
+      height: 100%;
+      background: #4a9eff;
+      transform-origin: left center;
+      transform: scaleX(1);
+      will-change: transform;
+    }
+    #progress-bar.running {
+      animation: progress-drain 30s linear forwards;
+    }
+    @keyframes progress-drain {
+      from { transform: scaleX(1); }
+      to   { transform: scaleX(0); }
+    }
+
+    /* ローディング */
+    .loading-spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid #333;
+      border-top-color: #4a9eff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>ゆりのき台第三<span class="arrow">→</span>八千代中央駅</h1>
+</header>
+
+<main id="main">
+  <div class="message-card">
+    <span class="loading-spinner"></span>取得中...
+  </div>
+</main>
+
+<div class="progress-wrap"><div id="progress-bar"></div></div>
+
+<footer>
+  <div class="footer-updated">
+    <span class="label">更新</span><span id="updated-time">--:--:--</span>
+  </div>
+  <div class="footer-now" id="now-time">--:--:--</div>
+</footer>
+
+<script>
+  const AUTO_REFRESH_MS = 30_000;
+  let lastFetchedAt = null;
+  let fetchTimer = null;
+
+  // ── 時刻フォーマット ──
+  function fmt(d) {
+    return [d.getHours(), d.getMinutes(), d.getSeconds()]
+      .map(n => String(n).padStart(2, '0')).join(':');
+  }
+  function fmtHHMM(str) {
+    if (!str) return '--:--:--';
+    const d = new Date(str);
+    return fmt(d);
+  }
+
+  // ── プログレスバーをリセットして再開 ──
+  function resetProgress() {
+    const bar = document.getElementById('progress-bar');
+    bar.classList.remove('running');
+    void bar.offsetWidth; // reflow で animation を強制リセット
+    bar.classList.add('running');
+  }
+
+  // ── 現在時刻を毎秒更新 ──
+  setInterval(() => {
+    document.getElementById('now-time').textContent = fmt(new Date());
+  }, 1000);
+
+  // ── 表示構築 ──
+  function renderBus(data) {
+    const main = document.getElementById('main');
+    lastFetchedAt = data.fetchedAt;
+    document.getElementById('updated-time').textContent = fmtHHMM(data.fetchedAt);
+
+    if (data.error && data.buses.length === 0) {
+      main.innerHTML = `<div class="message-card error">接続エラー<br><small style="color:#a55">${data.error}</small></div>`;
+      return;
+    }
+    if (data.buses.length === 0) {
+      main.innerHTML = `<div class="message-card">本日の運行は終了しました</div>`;
+      return;
+    }
+
+    let html = '';
+
+    // 先頭バス
+    const first = data.buses[0];
+    html += buildFirstCard(first);
+
+    // 次のバス
+    if (data.buses.length >= 2) {
+      const next = data.buses[1];
+      html += buildNextCard(next);
+    }
+
+    main.innerHTML = html;
+  }
+
+  function buildFirstCard(bus) {
+    if (bus.isCancelled) {
+      return `
+        <div class="bus-card first cancelled">
+          <div class="card-label">次のバス</div>
+          <div class="time-row">
+            <span class="status-icon">✕</span>
+            <div class="time-block">
+              <div class="time-label">予定</div>
+              <div class="time-value scheduled-small">${bus.scheduledTime}</div>
+            </div>
+            <span class="cancelled-badge">運休</span>
+          </div>
+        </div>`;
+    }
+
+    const icon = bus.minutesUntil <= 2 ? '▶' : '○';
+    const hasDiff = bus.scheduledTime !== bus.departureTime;
+
+    let timeHtml = `<div class="time-row">
+      <span class="status-icon">${icon}</span>`;
+
+    if (hasDiff) {
+      timeHtml += `
+      <div class="time-block">
+        <div class="time-label">予測</div>
+        <div class="time-value predicted">${bus.departureTime}</div>
+      </div>
+      <div class="time-block">
+        <div class="time-label">予定</div>
+        <div class="time-value scheduled-small">${bus.scheduledTime}</div>
+      </div>`;
+    } else {
+      timeHtml += `
+      <div class="time-block">
+        <div class="time-label">予定</div>
+        <div class="time-value">${bus.scheduledTime}</div>
+      </div>`;
+    }
+
+    if (bus.isDelayed) timeHtml += `<span class="delay-badge">遅延</span>`;
+    timeHtml += `</div>`;
+
+    const minutesHtml = bus.minutesUntil <= 0
+      ? `<div class="minutes-row"><span class="arriving-soon">まもなく到着</span></div>`
+      : `<div class="minutes-row"><span class="minutes-value">${bus.minutesUntil}</span><span class="minutes-unit">分後</span></div>`;
+
+    let stopsHtml = '';
+    if (bus.stopsPassed !== undefined) {
+      const stopText = bus.currentStop
+        ? `${bus.currentStop}通過（<span class="stops-num">${bus.stopsPassed}</span>つ前）`
+        : `<span class="stops-num">${bus.stopsPassed}</span>つ前の停留所を通過`;
+      stopsHtml = `<div class="stops-row">${stopText}</div>`;
+    }
+
+    return `
+      <div class="bus-card first">
+        <div class="card-label">次のバス</div>
+        ${timeHtml}
+        ${minutesHtml}
+        ${stopsHtml}
+      </div>`;
+  }
+
+  function buildNextCard(bus) {
+    const cancelledHtml = bus.isCancelled
+      ? `<span class="cancelled-badge" style="margin-left:12px;">運休</span>` : '';
+    return `
+      <div class="bus-card next">
+        <div class="card-label">その次</div>
+        <div class="time-row">
+          <div class="time-block">
+            <div class="time-label">予定</div>
+            <div class="time-value">${bus.scheduledTime}</div>
+          </div>
+          ${cancelledHtml}
+        </div>
+      </div>`;
+  }
+
+  // ── データ取得 ──
+  async function fetchBus(force = false) {
+    // 先頭バスのアイコン（○/▶）をスピナーに置き換える
+    const iconEl = document.querySelector('.bus-card.first .status-icon');
+    if (iconEl) iconEl.innerHTML = '<span class="icon-spinner"></span>';
+    try {
+      const url = `/api/bus${force ? '?refresh=1' : ''}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      renderBus(data);
+    } catch (err) {
+      document.getElementById('updated-time').textContent = fmt(new Date());
+      const main = document.getElementById('main');
+      // エラーでも既存表示があれば更新時刻だけ変える
+      if (!main.querySelector('.message-card.error') && main.querySelector('.bus-card')) return;
+      main.innerHTML = `<div class="message-card error">接続エラー<br><small style="color:#a55">${err.message}</small></div>`;
+    } finally {
+      if (fetchTimer) clearTimeout(fetchTimer);
+      fetchTimer = setTimeout(fetchBus, AUTO_REFRESH_MS);
+      resetProgress();
+    }
+  }
+
+  // ── ダブルタップで強制更新 ──
+  let tapCount = 0;
+  document.addEventListener('click', () => {
+    tapCount++;
+    setTimeout(() => { tapCount = 0; }, 400);
+    if (tapCount >= 2) { tapCount = 0; fetchBus(true); }
+  });
+
+  // ── 起動 ──
+  document.getElementById('now-time').textContent = fmt(new Date());
+  fetchBus();
+</script>
+</body>
+</html>
