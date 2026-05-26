@@ -8,6 +8,7 @@
  * ワーカーは1時間無通信で自動終了する。
  */
 
+require('dotenv').config();
 const http = require('http');
 const { spawn } = require('child_process');
 const path = require('path');
