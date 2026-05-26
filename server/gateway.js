@@ -121,12 +121,14 @@ function proxyToWorker(clientReq, clientRes) {
 
 const gateway = http.createServer(async (req, res) => {
   // CORS プリフライトはワーカーを起動せず即答
+  // BEHIND_APACHE=true の場合は Apache が CORS ヘッダーを付与するので省略
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, {
+    const corsHeaders = process.env.BEHIND_APACHE ? {} : {
       'Access-Control-Allow-Origin':  '*',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-    });
+    };
+    res.writeHead(204, corsHeaders);
     res.end();
     return;
   }
