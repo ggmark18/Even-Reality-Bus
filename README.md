@@ -154,11 +154,11 @@ htpasswd -c /etc/apache2/.htpasswd YOUR_USERNAME
 
 ### 3. 認証情報・URLの設定
 
-**`plugin/src/main.ts` の上部:**
-```typescript
-const API_BASE  = 'https://YOUR_DOMAIN/bus';
-const AUTH_USER = 'YOUR_USERNAME';
-const AUTH_PASS = 'YOUR_PASSWORD';
+**`plugin/.env`（プラグイン用・ビルド時に埋め込まれる）:**
+```
+VITE_API_BASE=https://YOUR_DOMAIN/bus
+VITE_AUTH_USER=YOUR_USERNAME
+VITE_AUTH_PASS=YOUR_PASSWORD
 ```
 
 **`plugin/app.json` のホワイトリスト:**
@@ -166,10 +166,10 @@ const AUTH_PASS = 'YOUR_PASSWORD';
 "whitelist": ["https://YOUR_DOMAIN"]
 ```
 
-**`server/public/index.html` の上部:**
-```javascript
-const AUTH_USER = 'YOUR_USERNAME';
-const AUTH_PASS = 'YOUR_PASSWORD';
+**`server/.env`（サーバー用・実行時に読み込まれる）:**
+```
+AUTH_USER=YOUR_USERNAME
+AUTH_PASS=YOUR_PASSWORD
 ```
 
 ---
@@ -184,21 +184,25 @@ npm install
 npm run dev          # Viteサーバー起動（localhost:5173）
 ```
 
-#### 実機テスト（QRサイドロード）
+#### ビルドとパッケージング
 
 ```bash
 cd plugin
-npm run build
-evenhub sideload dist  # QRコードが表示される → Even Realities Appでスキャン
+npm run build        # dist/ を生成
+npm run pack         # buscheck.ehpk を生成
 ```
 
-#### パッケージング（配布用）
+#### 実機インストール（Even Hub ポータル経由）
 
-```bash
-cd plugin
-npm run build
-npm run pack         # buscheck.ehpk が生成される
-```
+1. [https://hub.evenrealities.com/hub](https://hub.evenrealities.com/hub) にアクセスしてログイン
+2. `buscheck.ehpk` をアップロード
+3. iPhone の Even Realities アプリに自動的に反映される
+
+アップロード後は Even Realities アプリの Even Hub タブからアプリを起動できます。
+
+#### 一般公開
+
+同じポータルから公開申請を行うと、すべての G2 ユーザーが Even Hub ストアからインストールできるようになります。
 
 ---
 
