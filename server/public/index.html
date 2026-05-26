@@ -411,11 +411,13 @@
   // ── 起動：/api/config で認証情報を取得してからバス情報を取得 ──
   document.getElementById('now-time').textContent = fmt(new Date());
   let AUTH_HEADER = '';
-  try {
-    const cfg = await fetch(BASE_PATH + 'api/config');
-    if (cfg.ok) AUTH_HEADER = (await cfg.json()).auth || '';
-  } catch (_) { /* ローカル・認証なし環境では無視 */ }
-  fetchBus();
+  (async () => {
+    try {
+      const cfg = await fetch(BASE_PATH + 'api/config');
+      if (cfg.ok) AUTH_HEADER = (await cfg.json()).auth || '';
+    } catch (_) { /* ローカル・認証なし環境では無視 */ }
+    fetchBus();
+  })();
 </script>
 </body>
 </html>
