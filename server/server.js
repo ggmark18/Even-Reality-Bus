@@ -11,16 +11,15 @@ const app = express();
 // スマホ用ウェブUI（public/index.html）
 const publicDir = path.join(__dirname, 'public');
 
-// index.html が読み込む認証設定（環境変数から動的生成）
-app.get('/config.js', (req, res) => {
+// 認証設定を返す API（Apache の ProxyPass /bus/api/ 経由でアクセスされる）
+app.get('/api/config', (req, res) => {
   const user = process.env.AUTH_USER || '';
   const pass = process.env.AUTH_PASS || '';
   const header = user
     ? 'Basic ' + Buffer.from(`${user}:${pass}`).toString('base64')
     : '';
-  res.type('application/javascript');
   res.set('Cache-Control', 'no-store');
-  res.send(`window.__BUSCHECK_AUTH__=${JSON.stringify(header)};`);
+  res.json({ auth: header });
 });
 
 app.use(express.static(publicDir));

@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>BusCheck</title>
   <link rel="icon" href="https://toyo-bus.bus-navigation.jp/wgsys/img/favicon.ico">
-  <script src="config.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -230,9 +229,14 @@
 
 <script>
   const AUTO_REFRESH_MS = 30_000;
-  // 認証ヘッダーはサーバーが生成した config.js から取得
-  const AUTH_HEADER = (typeof window.__BUSCHECK_AUTH__ === 'string')
-    ? window.__BUSCHECK_AUTH__ : '';
+
+  // ベースパスを現在のURLから算出（末尾スラッシュを保証）
+  // 例: https://example.com/bus  → /bus/
+  //     https://example.com/bus/ → /bus/
+  //     http://localhost:3000/   → /
+  const BASE_PATH = window.location.pathname.endsWith('/')
+    ? window.location.pathname
+    : window.location.pathname + '/';
   let lastFetchedAt = null;
   let fetchTimer = null;
 
@@ -376,7 +380,7 @@
     const iconEl = document.querySelector('.bus-card.first .status-icon');
     if (iconEl) iconEl.innerHTML = '<span class="icon-spinner"></span>';
     try {
-      const url = `api/bus${force ? '?refresh=1' : ''}`;
+      const url = BASE_PATH + `api/bus${force ? '?refresh=1' : ''}`;
       const res = await fetch(url, {
         headers: { 'Authorization': AUTH_HEADER }
       });
@@ -404,8 +408,13 @@
     if (tapCount >= 2) { tapCount = 0; fetchBus(true); }
   });
 
-  // ── 起動 ──
+  // ── 起動：/api/config で認証情報を取得してからバス情報を取得 ──
   document.getElementById('now-time').textContent = fmt(new Date());
+  let AUTH_HEADER = '';
+  try {
+    const cfg = await fetch(BASE_PATH + 'api/config');
+    if (cfg.ok) AUTH_HEADER = (await cfg.json()).auth || '';
+  } catch (_) { /* ローカル・認証なし環境では無視 */ }
   fetchBus();
 </script>
 </body>
